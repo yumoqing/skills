@@ -1,19 +1,29 @@
 ---
 name: suno_executor
-description: 调用Suno接口上传音频并根据规格约束生成伴奏
+description: 调用Suno接口实现音乐创作
 ---
 
-# SKILLS.md：Suno伴奏生成执行器 (suno_executor)
+# suno_executor
+调用suno提供的API，能够完成歌曲创作，配乐，以及改写功能
 
 ## 1. 技能概述
-`suno_executor` 负责将用户的原始清唱音频上传至音乐生成引擎，并应用 `audio_analyzer` 输出的节奏与调性约束，完成高保真的伴奏合成。
+`suno_executor` 负责将用户的输入歌词，风格，以及歌名，参考音频（可选），自动补全音乐指令后，调用suno的API完成音乐创作
 
-## 2. 接口规范 (Stdin/Stdout)
+## 2. 指令集
+[指令集](references/instruction.md)含有suno V5的全部指令集，补全音乐指令需要参考这个指令集
+
+## 3. 创作歌曲
+需要输入歌词，风格和歌名
 
 ### 输入参数 (JSON)
 | 字段名 | 类型 | 说明 |
 | :--- | :--- | :--- |
-| `file_path` | str | 原始清唱音频的本地路径 |
+| `title` |
+| `lyrics` |
+| `style` |
+
+
+| `url` | str | 原始清唱音频的公网url |
 | `bpm` | int | 节奏规格 (来自分析节点) |
 | `key` | str | 调性规格 (来自分析节点) |
 | `prompt` | str | 风格描述词 (可由分析节点生成或用户提供) |
