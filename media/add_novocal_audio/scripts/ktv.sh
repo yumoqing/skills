@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+## 需要从标准输入获得参数
+skilldir=$(pwd)
+mkdir -p tmp
 cd tmp
 cdir=$(pwd)
 id=tmp$$
@@ -10,7 +13,7 @@ echo ls -l output_video*
 ls -l output_video*
 mkdir ${id}
 cd ${id}
-demucs --two-stems=vocals ${cdir}/output_audio${id}.wav
+${skilldir}/py3/bin/demucs --two-stems=vocals ${cdir}/output_audio${id}.wav
 echo ls -l ${adir}
 ls -l ${adir}
 cd ${cdir}
