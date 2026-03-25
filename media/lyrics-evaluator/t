@@ -1,0 +1,200 @@
+# lyrics-evaluator (Claude Code Skills 标准版 v2)
+
+## 📁 目录结构
+
+```
+lyrics-evaluator/
+├── SKILL.md
+├── scripts/
+│   └── run.sh
+├── references/
+│   └── scoring_guide.md
+└── assets/
+    └── prompt_template.txt
+```
+
+---
+
+# 🧠 SKILL.md
+
+```yaml
+name: lyrics-evaluator
+description: Evaluate lyrics quality across multiple dimensions and return structured scoring and suggestions
+version: 2.0
+inputs:
+  - name: lyrics
+    type: string
+    description: The lyrics text to evaluate
+outputs:
+  - name: result
+    type: json
+    description: Structured evaluation result
+entry: scripts/run.sh
+```
+
+---
+
+# ⚙️ scripts/run.sh
+
+```bash
+#!/bin/bash
+
+# 输入参数
+INPUT="$1"
+
+# 轻量分析（节奏 + 押韵）
+LINES=$(echo "$INPUT" | sed '/^$/d')
+LINE_COUNT=$(echo "$LINES" | wc -l)
+
+# 句长统计
+LENGTHS=$(echo "$LINES" | awk '{print length}')
+AVG=$(echo "$LENGTHS" | awk '{sum+=$1} END {print sum/NR}')
+STD=$(echo "$LENGTHS" | awk -v avg=$AVG '{sum+=($1-avg)^2} END {print sqrt(sum/NR)}')
+
+# 节奏分数
+if [ "$AVG" = "0" ]; then
+  RHYTHM=0
+else
+  RHYTHM=$(awk -v std=$STD -v avg=$AVG 'BEGIN {print 1 - std/avg}')
+fi
+
+# 押韵（简单尾字统计）
+LAST_CHARS=$(echo "$LINES" | awk '{print substr($0,length,1)}')
+TOP_FREQ=$(echo "$LAST_CHARS" | sort | uniq -c | sort -nr | head -n1 | awk '{print $1}')
+RHYME=$(awk -v top=$TOP_FREQ -v total=$LINE_COUNT 'BEGIN {print top/total}')
+
+# 构造增强输入
+ENHANCED=$(cat <<EOF
+{
+  "lyrics": "$INPUT",
+  "analysis": {
+    "rhythm_score": $RHYTHM,
+    "rhyme_score": $RHYME,
+    "line_count": $LINE_COUNT
+  }
+}
+EOF
+)
+
+# 输出给 skill engine（由 engine 调用 LLM）
+echo "$ENHANCED"
+```
+
+---
+
+# 📘 references/scoring_guide.md
+
+```markdown
+# 歌词评分标准
+
+## 1. 内容表达
+- 主题是否清晰
+- 情感是否真实
+
+## 2. 文学性
+- 是否有意象
+- 是否有修辞
+
+## 3. 音乐性
+- 押韵
+- 节奏
+
+## 4. 结构
+- 是否有主歌副歌
+
+## 5. 商业潜力
+- 是否有记忆点
+- 是否易传播
+```
+
+---
+
+# 🧾 assets/prompt_template.txt
+
+```text
+你是专业作词评估专家。
+
+【输入数据】
+{{input_json}}
+
+请基于以下维度评分（0-100）：
+1. 内容表达
+2. 文学性
+3. 音乐性（结合节奏和押韵）
+4. 结构
+5. 商业潜力
+
+输出 JSON：
+{
+  "total_score": number,
+  "scores": {
+    "content": number,
+    "literary": number,
+    "musical": number,
+    "structure": number,
+    "commercial": number
+  },
+  "highlights": [],
+  "issues": [],
+  "suggestions": []
+}
+```
+
+---
+
+# ✅ 说明（关键设计点）
+
+- ✅ Skill **不调用 LLM**
+- ✅ 只负责：数据增强 + 结构定义
+- ✅ LLM 调用完全由 Skill Engine 接管
+- ✅ 符合 Claude Code Skills 标准结构
+
+---
+
+# 🚀 如何接入你的 Skill Engine
+
+### Step1：执行 skill
+
+```bash
+run.sh "歌词内容"
+```
+
+输出：
+```json
+{
+  "lyrics": "...",
+  "analysis": {...}
+}
+```
+
+---
+
+### Step2：engine 拼 prompt
+
+```python
+prompt = template.replace("{{input_json}}", skill_output)
+```
+
+---
+
+### Step3：调用 LLM
+
+```python
+result = llm_call(prompt)
+```
+
+---
+
+# 🎯 下一步建议
+
+如果你要做“生产级”，建议再升级：
+
+- 加 JSON schema 校验
+- 支持多阶段任务（scoring / critique 分离）
+- 支持多模型 fallback
+
+---
+
+如果你要，我可以下一步直接给你：
+👉 **带 DAG 调度 + 多任务拆分的 v3 版本（完全匹配你调度系统）**
+
